@@ -3,8 +3,8 @@ import { Sky } from 'three/examples/jsm/objects/Sky.js'
 import { scene, sun } from './core.js'
 
 export function initSky({
-  turbidity       = 4,
-  rayleigh        = 1.2,
+  turbidity       = 0.5,
+  rayleigh        = 0.5,
   mieCoefficient  = 0.005,
   mieDirectionalG = 0.8,
   elevation       = 20,   // degrees above horizon

@@ -3,8 +3,9 @@ import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader.js'
 import { scene } from '../engine/core.js'
 import { PhysicsBody, addBody } from '../engine/physics.js'
 import { isPressed } from '../engine/input.js'
-import { getCameraYaw } from '../engine/followCamera.js'
+import { getFPSYaw } from '../engine/firstPersonCamera.js'
 import { createEntity, addComponent } from '../engine/ecs.js'
+import { terrainHeight } from '../engine/terrain/noise.js'
 
 // Invisible group — physics drives its position, player input drives its rotation.
 const pivot = new THREE.Group()
@@ -13,7 +14,7 @@ scene.add(pivot)
 export const playerBody = addBody(
   new PhysicsBody({
     mass: 20,
-    position: new THREE.Vector3(0, 1, 0),
+    position: new THREE.Vector3(0, terrainHeight(0, 0) + 3, 0),
     halfSize: new THREE.Vector3(0.5, 1, 0.5),
     friction: 0.05
   }),
@@ -54,6 +55,7 @@ async function loadCharacter() {
 
   fbx.scale.setScalar(0.01)
   fbx.position.y = -1  // shift feet to bottom of physics box
+  fbx.visible = false  // hidden in first-person — camera is inside the model
   fbx.traverse(child => {
     if (child.isMesh) child.castShadow = true
   })
@@ -97,7 +99,7 @@ const moveDir    = new THREE.Vector3()
 let facingAngle  = 0
 
 export function updatePlayer(delta) {
-  const yaw  = getCameraYaw()
+  const yaw  = getFPSYaw()
   const cosY = Math.cos(yaw)
   const sinY = Math.sin(yaw)
 
