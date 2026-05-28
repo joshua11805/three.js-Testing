@@ -14,10 +14,12 @@ void main() {
   vec4 texColor = texture2D(uTexture, vUv);
 
   // Fresnel rim — bright at silhouette edges, dark at center
+
   float fresnel = 1.0 - max(dot(vNormal, vViewDir), 0.0);
   fresnel = pow(fresnel, RIM_POWER);
 
   // Animated color cycling between blue and orange
+  
   float pulse = 0.5 + 0.5 * sin(uTime * PULSE_SPEED);
   vec3 rimColor = mix(vec3(0.0, 0.5, 1.0), vec3(1.0, 0.3, 0.0), pulse);
 

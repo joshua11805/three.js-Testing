@@ -1,4 +1,5 @@
-import { initHud, setHealth, setScore }  from './hud.js'
+//import { initHud, setHealth, setScore }  from './hud.js'
+import { initDriveHud, setSpeed }  from './driveHUD.js'
 import { initPauseMenu, isPaused }       from './pauseMenu.js'
 import { initStartScreen, isStarted }    from './startScreen.js'
 import { DamageNumber }                  from './DamageNumber.js'
@@ -8,13 +9,12 @@ const worldElements = []
 
 export function initGameUI() {
   initStartScreen()
-  initHud()
+  initDriveHud()
   initPauseMenu()
 }
 
 export function updateGameUI(delta) {
   updateUI(delta)
-
   for (let i = worldElements.length - 1; i >= 0; i--) {
     const el = worldElements[i]
     el.update(delta)
@@ -29,4 +29,5 @@ export function spawnDamageNumber(amount, position) {
   worldElements.push(new DamageNumber(amount, position))
 }
 
-export { setHealth, setScore, showNotification, isStarted, isPaused }
+
+export { setSpeed, showNotification, isStarted, isPaused }

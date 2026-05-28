@@ -1,69 +1,49 @@
-import { onUpdate, startLoop }                         from './engine/loop.js'
-import { stepPhysics }                                  from './engine/physics.js'
-import { initFirstPersonCamera, updateFirstPersonCamera } from './engine/firstPersonCamera.js'
-import { tickShaders }                                  from './engine/shaderSystem.js'
-import { initDebug }                                    from './engine/debug.js'
-import { initUI }                                       from './ui/ui.js'
-import { initGameUI, updateGameUI, isStarted, isPaused } from './game/ui/gameUI.js'
-import { initTerrain, updateTerrain, WATER_LEVEL }       from './engine/terrain/chunkManager.js'
-import { initTerrainUI }                                from './engine/terrain/terrainUI.js'
-import { terrainHeight }                                from './engine/terrain/noise.js'
-import { applyWaterPhysics }                             from './engine/terrain/water/waterPhysics.js'
-import { query }                                        from './engine/ecs.js'
-import { scene, camera }                                from './engine/core.js'
-import { updateUnderwaterEffect }                       from './engine/underwaterEffect.js'
+import { onUpdate, startLoop }                              from './engine/loop.js'
+import { stepPhysics }                                      from './engine/physics.js'
+import { initFirstPersonCamera }                            from './engine/firstPersonCamera.js'
+import { tickShaders }                                      from './engine/shaderSystem.js'
+import { initDebug }                                        from './engine/debug.js'
+import { initUI }                                           from './ui/ui.js'
+import { initGameUI, updateGameUI, isStarted, isPaused, setSpeed }    from './game/ui/gameUI.js'
+import { initTerrain, updateTerrain }                       from './engine/terrain/chunkManager.js'
+import { updateRoad }                                        from './engine/terrain/road.js'
+import { initTerrainUI }                                    from './engine/terrain/terrainUI.js'
+import { pulseUniforms }                                    from './engine/terrain/chunkMesh.js'
+import { scene }                                            from './engine/core.js'
+import { initEngineAudio, updateEngineAudio }               from './engine/audio.js'
+import { initEngineSynthUI }                                from './engine/engineSynthUI.js'
 import './game/level.js'
-import player, { updatePlayer, playerBody }             from './game/player.js'
-import { initSky } from './engine/sky.js'
-
+import { updateVehicleSystem, getActiveSpeed, getActivePosition, getActiveCarForward } from './game/vehicleSystem.js'
 
 initDebug()
 initFirstPersonCamera()
 initUI()
 initGameUI()
 initTerrain(scene)
-//initSky()
 initTerrainUI()
+initEngineAudio()
+initEngineSynthUI()
 
 let totalTime = 0
 
-// Clamps a physics body above the terrain surface each frame.
-// This replaces the old static floor body for bodies that move over terrain.
-function applyTerrainCollision(body, halfHeight) {
-  const floor = terrainHeight(body.position.x, body.position.z)
-  const feet  = body.position.y - halfHeight
-  if (feet < floor) {
-    body.position.y = floor + halfHeight
-    if (body.velocity.y < 0) {
-      body.velocity.y *= -body.restitution
-      if (Math.abs(body.velocity.y) < 0.5) body.velocity.y = 0
-      body.onGround = true
-    }
-  }
-}
-
 onUpdate((delta) => {
   totalTime += delta
-  updateUnderwaterEffect(camera.position.y, totalTime)
+
+  pulseUniforms.uTime.value  = totalTime
+  pulseUniforms.uPulse.value = Math.min(1.0, Math.max(0.0, (getActiveSpeed() - 45) / 45))
+
   tickShaders(delta)
   stepPhysics(delta)
   updateGameUI(delta)
+  setSpeed(getActiveSpeed())
+  updateEngineAudio(getActiveSpeed(), 45)
 
-  // Terrain collision and water physics for the player
-  applyTerrainCollision(playerBody, playerBody.halfSize.y)
-  applyWaterPhysics(playerBody, playerBody.halfSize.y, delta, WATER_LEVEL)
+  const active = isStarted() && !isPaused()
+  updateVehicleSystem(delta, active)
 
-  // Terrain collision and water physics for all balls
-  for (const { Physics } of query('Physics', 'Ball')) {
-    applyTerrainCollision(Physics.body, Physics.body.radius)
-    applyWaterPhysics(Physics.body, Physics.body.radius, delta, WATER_LEVEL)
-  }
-
-  if (!isStarted() || isPaused()) return
-
-  updatePlayer(delta)
-  updateFirstPersonCamera(player.position)
-  updateTerrain(player.position, totalTime)
+  const pos = getActivePosition()
+  updateRoad(pos.x, pos.z)
+  if (active) updateTerrain(pos, totalTime, getActiveCarForward(), delta)
 })
 
 startLoop()

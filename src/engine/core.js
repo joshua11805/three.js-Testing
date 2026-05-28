@@ -9,26 +9,26 @@ renderer.setPixelRatio(window.devicePixelRatio)
 renderer.shadowMap.enabled = true
 
 export const scene = new THREE.Scene()
-scene.background = new THREE.Color(0xf07030)
+scene.background = new THREE.Color(0x050012)
 
-export const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000)
+export const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000)
 
-// Very dim warm ambient — lifts pitch-black shadows without washing out colour
-const ambient = new THREE.AmbientLight(0xffccaa, 0.06)
+// Very dim ambient — keeps the scene dark so neon edges pop
+const ambient = new THREE.AmbientLight(0xffffff, 0.8)
 scene.add(ambient)
 
-// Hemisphere kept subtle so terrain colours still read — just warms upward faces
-const hemi = new THREE.HemisphereLight(0xffaa55, 0x1a0d06, 0.3)
+// Faint cool fill from above, near-black from below
+const hemi = new THREE.HemisphereLight(0x1a0a3a, 0x050010, 0.4)
 scene.add(hemi)
 
-// Low sun near the horizon — warm orange, grazing angle for long shadows
-export const sun = new THREE.DirectionalLight(0xffccaa, 1.6)
-sun.position.set(150, 12, 40)
+// Subtle blue-purple key light for directional depth without washing out neon
+export const sun = new THREE.DirectionalLight(0x5030cc, 0.35)
+sun.position.set(80, 40, 60)
 sun.castShadow = true
 sun.shadow.camera.near = 1
-sun.shadow.camera.far  = 600
-sun.shadow.camera.left = sun.shadow.camera.bottom = -200
-sun.shadow.camera.right = sun.shadow.camera.top   =  200
+sun.shadow.camera.far  = 400
+sun.shadow.camera.left = sun.shadow.camera.bottom = -150
+sun.shadow.camera.right = sun.shadow.camera.top   =  150
 sun.shadow.mapSize.set(2048, 2048)
 scene.add(sun)
 

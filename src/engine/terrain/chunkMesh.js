@@ -1,91 +1,173 @@
 import * as THREE from 'three'
 import { terrainHeight, terrainColor } from './noise.js'
-import { WATER_LEVEL } from './terrainConfig.js'
-import waterColorSrc from '../../game/shaders/waterColor.glsl?raw'
+import { applyRoad } from './road.js'
 
-export const CHUNK_SIZE = 64
+export const CHUNK_SIZE = 32
+export const LOD_SEGMENTS = [16, 16, 16, 16]
 
-const LOD_SEGMENTS = [32, 32, 32, 32]
+// ─── shared pulse uniforms ────────────────────────────────────────────────────
+// uTime:  total elapsed seconds, drives oscillation frequency
+// uPulse: 0..1 gameplay scalar — controls both speed and intensity of the pulse
+export const pulseUniforms = {
+  uTime:  { value: 0 },
+  uPulse: { value: 0 },
+}
 
+// ─── neon edge + pulse shader ─────────────────────────────────────────────────
+const neonEdgeSrc = `
+{
+  float _ed   = min(vBary.x, min(vBary.y, vBary.z));
+  float _line = 1.0 - smoothstep(0.0,  0.05, _ed);
+  float _glow = 1.0 - smoothstep(0.0,  0.22, _ed);
+  vec3 _edgeCol = mix(vec3(0.0, 1.0, 0.85),  vec3(1.0, 0.1, 0.55),  vRoad);
+  vec3 _glowCol = mix(vec3(0.1, 0.35, 1.0),  vec3(0.7, 0.05, 0.35), vRoad);
+  totalEmissiveRadiance += _edgeCol * _line * 2.5
+                         + _glowCol * _glow * 0.45;
+
+  float _pSpeed = 1.0 + uPulse * 8.0;
+  float _wave   = sin(uTime * _pSpeed) * 0.5 + 0.5;
+  vec3  _pulseCol = mix(vec3(0.02, 0.05, 0.12), vec3(1.0, 0.15, 0.55), _wave);
+  totalEmissiveRadiance += _pulseCol * uPulse * 1.5;
+}
+`
+
+// Shared injection helper used by both the static and animated materials.
+function injectNeon(shader) {
+  Object.assign(shader.uniforms, pulseUniforms)
+
+  shader.vertexShader =
+    'attribute vec3 aBary;\nattribute float aRoad;\nvarying vec3 vBary;\nvarying float vRoad;\n' +
+    shader.vertexShader
+  shader.vertexShader = shader.vertexShader.replace(
+    '#include <begin_vertex>',
+    `#include <begin_vertex>
+    vBary = aBary;
+    vRoad = aRoad;`
+  )
+
+  shader.fragmentShader =
+    'varying vec3 vBary;\nvarying float vRoad;\nuniform float uTime;\nuniform float uPulse;\n' +
+    shader.fragmentShader
+  shader.fragmentShader = shader.fragmentShader.replace(
+    '#include <emissivemap_fragment>',
+    `#include <emissivemap_fragment>\n${neonEdgeSrc}`
+  )
+}
+
+// ─── shared static material (used after animation completes) ─────────────────
 export const terrainMaterial = new THREE.MeshStandardMaterial({
   vertexColors: true,
   roughness: 1.0,
   metalness: 0.0,
   flatShading: true,
 })
+terrainMaterial.onBeforeCompile = injectNeon
+terrainMaterial.customProgramCacheKey = () => 'terrain-neon'
 
-// Extract just the body of waterColor.glsl (strip the uniform/void main wrapper)
-// and inject it into Three.js's MeshStandardMaterial via onBeforeCompile.
-terrainMaterial.onBeforeCompile = (shader) => {
-  shader.uniforms.uWaterLevel = { value: WATER_LEVEL }
+// ─── per-chunk animated material ─────────────────────────────────────────────
+function makeAnimMaterial() {
+  const animUniforms = { uProgress: { value: 0 } }
+  const mat = new THREE.MeshStandardMaterial({
+    vertexColors: true,
+    roughness: 1.0,
+    metalness: 0.0,
+    flatShading: true,
+  })
+  mat.onBeforeCompile = (shader) => {
+    Object.assign(shader.uniforms, animUniforms)
+    Object.assign(shader.uniforms, pulseUniforms)
 
-  shader.vertexShader = 'varying float vTerrainWorldY;\n' + shader.vertexShader
-  shader.vertexShader = shader.vertexShader.replace(
-    '#include <begin_vertex>',
-    `#include <begin_vertex>
-    vTerrainWorldY = ( modelMatrix * vec4( position, 1.0 ) ).y;`
-  )
+    shader.vertexShader =
+      'attribute vec3 aBary;\nattribute float aRoad;\nattribute vec3 aOffset;\nuniform float uProgress;\nvarying vec3 vBary;\nvarying float vRoad;\n' +
+      shader.vertexShader
+    shader.vertexShader = shader.vertexShader.replace(
+      '#include <begin_vertex>',
+      `#include <begin_vertex>
+      float _animT    = clamp(uProgress, 0.0, 1.0);
+      float _animEase = _animT * _animT * (3.0 - 2.0 * _animT);
+      transformed += aOffset * (1.0 - _animEase);
+      vBary = aBary;
+      vRoad = aRoad;`
+    )
 
-  shader.fragmentShader = 'varying float vTerrainWorldY;\nuniform float uWaterLevel;\n' + shader.fragmentShader
-  shader.fragmentShader = shader.fragmentShader.replace(
-    '#include <color_fragment>',
-    `#include <color_fragment>\n${waterColorSrc}`
-  )
+    shader.fragmentShader =
+      'varying vec3 vBary;\nvarying float vRoad;\nuniform float uTime;\nuniform float uPulse;\n' +
+      shader.fragmentShader
+    shader.fragmentShader = shader.fragmentShader.replace(
+      '#include <emissivemap_fragment>',
+      `#include <emissivemap_fragment>\n${neonEdgeSrc}`
+    )
+  }
+  mat.customProgramCacheKey = () => 'terrain-anim-neon'
+  return { mat, animUniforms }
 }
-terrainMaterial.customProgramCacheKey = () => 'terrain-water-color'
 
+// ─── chunk mesh builder ───────────────────────────────────────────────────────
 export function buildChunkMesh(chunkX, chunkZ, lod) {
   const segments = LOD_SEGMENTS[Math.min(lod, LOD_SEGMENTS.length - 1)]
   const step     = CHUNK_SIZE / segments
-  const stride   = segments + 1
+  const originX  = chunkX * CHUNK_SIZE
+  const originZ  = chunkZ * CHUNK_SIZE
 
-  const vertCount = stride * stride
+  const triCount  = segments * segments * 2
+  const vertCount = triCount * 3
+
   const positions = new Float32Array(vertCount * 3)
   const colors    = new Float32Array(vertCount * 3)
-  const uvs       = new Float32Array(vertCount * 2)
+  const offsets   = new Float32Array(vertCount * 3)
+  const bary      = new Float32Array(vertCount * 3)  // all zero → set one component per vertex
+  const aRoad     = new Float32Array(vertCount)
 
-  const originX = chunkX * CHUNK_SIZE
-  const originZ = chunkZ * CHUNK_SIZE
+  let vi = 0
 
-  let vi = 0, ci = 0, ui = 0
-  for (let iz = 0; iz < stride; iz++) {
-    for (let ix = 0; ix < stride; ix++) {
-      const wx = originX + ix * step
-      const wz = originZ + iz * step
-      const y  = terrainHeight(wx, wz)
-      const c  = terrainColor(y)
+  function addVert(wx, wz, ox, oy, oz) {
+    const baseY = terrainHeight(wx, wz)
+    const baseC = terrainColor(baseY)
+    const { y, r, g, b, road } = applyRoad(wx, wz, baseY, baseC, terrainHeight)
 
-      positions[vi++] = wx;  positions[vi++] = y;   positions[vi++] = wz
-      colors[ci++]    = c.r; colors[ci++]    = c.g; colors[ci++]    = c.b
-      uvs[ui++]       = ix / segments
-      uvs[ui++]       = iz / segments
-    }
+    const i  = vi * 3
+    positions[i]     = wx;  positions[i + 1] = y;  positions[i + 2] = wz
+    colors[i]        = r;   colors[i + 1]    = g;  colors[i + 2]    = b
+    offsets[i]       = ox;  offsets[i + 1]   = oy; offsets[i + 2]   = oz
+    aRoad[vi]        = road
+
+    // Barycentric: vertex 0→(1,0,0), 1→(0,1,0), 2→(0,0,1) repeating per triangle
+    bary[i + (vi % 3)] = 1.0
+
+    vi++
   }
 
-  const indices = new Uint32Array(segments * segments * 6)
-  let ii = 0
   for (let iz = 0; iz < segments; iz++) {
     for (let ix = 0; ix < segments; ix++) {
-      const a = iz * stride + ix
-      const b = a + 1
-      const c = a + stride
-      const d = c + 1
-      indices[ii++] = a; indices[ii++] = c; indices[ii++] = b
-      indices[ii++] = b; indices[ii++] = c; indices[ii++] = d
+      const x0 = originX + ix * step, x1 = x0 + step
+      const z0 = originZ + iz * step, z1 = z0 + step
+
+      const oy1 = Math.random() * 150
+      const ox1 = (Math.random() - 0.3) * 30, oz1 = (Math.random() - 0.3) * 30
+      addVert(x0, z0, ox1, oy1, oz1)
+      addVert(x0, z1, ox1, oy1, oz1)
+      addVert(x1, z0, ox1, oy1, oz1)
+
+      const oy2 = Math.random() * 150 + 50
+      const ox2 = (Math.random() - 0.5) * 20, oz2 = (Math.random() - 0.5) * 20
+      addVert(x1, z0, ox2, oy2, oz2)
+      addVert(x0, z1, ox2, oy2, oz2)
+      addVert(x1, z1, ox2, oy2, oz2)
     }
   }
 
   const geo = new THREE.BufferGeometry()
   geo.setAttribute('position', new THREE.BufferAttribute(positions, 3))
   geo.setAttribute('color',    new THREE.BufferAttribute(colors,    3))
-  geo.setAttribute('uv',       new THREE.BufferAttribute(uvs,       2))
-  geo.setIndex(new THREE.BufferAttribute(indices, 1))
+  geo.setAttribute('aOffset',  new THREE.BufferAttribute(offsets,   3))
+  geo.setAttribute('aBary',    new THREE.BufferAttribute(bary,      3))
+  geo.setAttribute('aRoad',    new THREE.BufferAttribute(aRoad,     1))
   geo.computeVertexNormals()
   geo.computeBoundingSphere()
-  geo.boundingSphere.radius += CHUNK_SIZE  // pad so edge chunks aren't incorrectly culled
+  geo.boundingSphere.radius += CHUNK_SIZE + 200
 
-  const mesh = new THREE.Mesh(geo, terrainMaterial)
+  const { mat, animUniforms } = makeAnimMaterial()
+  const mesh = new THREE.Mesh(geo, mat)
   mesh.receiveShadow = true
-  return mesh
+  return { mesh, animUniforms }
 }
-

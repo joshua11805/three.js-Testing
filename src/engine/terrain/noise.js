@@ -24,8 +24,11 @@ export function terrainHeight(x, z) {
 }
 
 export function terrainColor(y) {
-  if (y < -3)  return { r: 0.76, g: 0.70, b: 0.50 }  // sand
-  if (y <  6)  return { r: 0.25, g: 0.52, b: 0.16 }  // grass
-  if (y < 15)  return { r: 0.44, g: 0.36, b: 0.26 }  // rock
-  return             { r: 0.90, g: 0.90, b: 0.95 }  // snow
+  // Dark base for neon aesthetic — slight height variation adds depth perception
+  const t = Math.max(0, Math.min(1, (y + 25) / 50))
+  return {
+    r: 0.02 + t * 0.03,
+    g: 0.01 + t * 0.02,
+    b: 0.06 + t * 0.07,
+  }
 }
