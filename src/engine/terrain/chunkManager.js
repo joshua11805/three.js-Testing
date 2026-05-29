@@ -55,8 +55,8 @@ function disposeChunk(k) {
 
 export function initTerrain(sceneRef) {
   const fogFar  = FORWARD_DISTANCE * CHUNK_SIZE * 0.9
-  const fogNear = fogFar * 0.55
-  sceneRef.fog = new THREE.Fog(0x050012, fogNear, fogFar)
+  const fogNear = fogFar * 0.75
+  sceneRef.fog = new THREE.Fog(0xffffff, fogNear, fogFar)
 }
 
 export function dirtyAllChunks() {

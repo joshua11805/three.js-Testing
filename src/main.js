@@ -12,38 +12,46 @@ import { pulseUniforms }                                    from './engine/terra
 import { scene }                                            from './engine/core.js'
 import { initEngineAudio, updateEngineAudio }               from './engine/audio.js'
 import { initEngineSynthUI }                                from './engine/engineSynthUI.js'
+import { updateSpeedDistortion }                            from './engine/speedDistortion.js'
+import { updateSky }                                        from './engine/sky.js'
 import './game/level.js'
 import { updateVehicleSystem, getActiveSpeed, getActivePosition, getActiveCarForward } from './game/vehicleSystem.js'
 
-initDebug()
+//initDebug()
 initFirstPersonCamera()
 initUI()
-initGameUI()
+initGameUI(() => {
+  initTerrainUI()
+  initEngineSynthUI()
+})
 initTerrain(scene)
-initTerrainUI()
 initEngineAudio()
-initEngineSynthUI()
 
 let totalTime = 0
 
 onUpdate((delta) => {
   totalTime += delta
 
-  pulseUniforms.uTime.value  = totalTime
-  pulseUniforms.uPulse.value = Math.min(1.0, Math.max(0.0, (getActiveSpeed() - 45) / 45))
+  //pulseUniforms.uTime.value  = totalTime
+  //pulseUniforms.uPulse.value = Math.min(1.0, Math.max(0.0, (getActiveSpeed() - 20) / 100))
 
+  updateSky(delta)
   tickShaders(delta)
-  stepPhysics(delta)
-  updateGameUI(delta)
-  setSpeed(getActiveSpeed())
-  updateEngineAudio(getActiveSpeed(), 45)
-
   const active = isStarted() && !isPaused()
-  updateVehicleSystem(delta, active)
 
-  const pos = getActivePosition()
-  updateRoad(pos.x, pos.z)
-  if (active) updateTerrain(pos, totalTime, getActiveCarForward(), delta)
+  updateGameUI(delta)
+
+  if (active){
+    setSpeed(getActiveSpeed())
+    stepPhysics(delta)
+    updateVehicleSystem(delta, active)
+    updateEngineAudio(getActiveSpeed(), 45)
+    updateSpeedDistortion(getActiveSpeed(), delta)
+    setSpeed(getActiveSpeed())
+    const pos = getActivePosition()
+    updateRoad(pos.x, pos.z)
+    updateTerrain(pos, totalTime, getActiveCarForward(), delta)
+  }
 })
 
 startLoop()

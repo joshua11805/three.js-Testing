@@ -1,9 +1,13 @@
+import { pauseMusic, resumeMusic, pauseEngineAudio, resumeEngineAudio } from '../../engine/audio.js'
+
 let paused = false
 let overlay = null
 
 function setPaused(val) {
   paused = val
   overlay.classList.toggle('visible', paused)
+  if (paused) { pauseMusic(); pauseEngineAudio() }
+  else        { resumeMusic(); resumeEngineAudio() }
 }
 
 export function isPaused() { return paused }

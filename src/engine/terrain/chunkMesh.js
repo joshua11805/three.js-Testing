@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import { terrainHeight, terrainColor } from './noise.js'
+import { terrainHeight } from './noise.js'
 import { applyRoad } from './road.js'
 
 export const CHUNK_SIZE = 32
@@ -19,7 +19,7 @@ const neonEdgeSrc = `
   float _ed   = min(vBary.x, min(vBary.y, vBary.z));
   float _line = 1.0 - smoothstep(0.0,  0.05, _ed);
   float _glow = 1.0 - smoothstep(0.0,  0.22, _ed);
-  vec3 _edgeCol = mix(vec3(0.0, 1.0, 0.85),  vec3(1.0, 0.1, 0.55),  vRoad);
+  vec3 _edgeCol = mix(vec3(0.0, 0.5, 0.45),  vec3(1.0, 0.1, 0.55),  vRoad);
   vec3 _glowCol = mix(vec3(0.1, 0.35, 1.0),  vec3(0.7, 0.05, 0.35), vRoad);
   totalEmissiveRadiance += _edgeCol * _line * 2.5
                          + _glowCol * _glow * 0.45;
@@ -102,6 +102,16 @@ function makeAnimMaterial() {
   return { mat, animUniforms }
 }
 
+// ─── triangle colour palette ──────────────────────────────────────────────────
+const PALETTE = [
+  { r: 0.04, g: 0.00, b: 0.14 },  // near-black deep violet
+  { r: 0.00, g: 0.08, b: 0.18 },  // dark ocean teal
+  { r: 0.10, g: 0.00, b: 0.30 },  // indigo
+  { r: 0.22, g: 0.00, b: 0.18 },  // dark magenta
+  { r: 0.02, g: 0.43, b: 0.22 },  // midnight blue
+  { r: 0.25, g: 0.02, b: 0.25 },  // dark purple
+]
+
 // ─── chunk mesh builder ───────────────────────────────────────────────────────
 export function buildChunkMesh(chunkX, chunkZ, lod) {
   const segments = LOD_SEGMENTS[Math.min(lod, LOD_SEGMENTS.length - 1)]
@@ -120,9 +130,8 @@ export function buildChunkMesh(chunkX, chunkZ, lod) {
 
   let vi = 0
 
-  function addVert(wx, wz, ox, oy, oz) {
+  function addVert(wx, wz, ox, oy, oz, baseC) {
     const baseY = terrainHeight(wx, wz)
-    const baseC = terrainColor(baseY)
     const { y, r, g, b, road } = applyRoad(wx, wz, baseY, baseC, terrainHeight)
 
     const i  = vi * 3
@@ -142,17 +151,19 @@ export function buildChunkMesh(chunkX, chunkZ, lod) {
       const x0 = originX + ix * step, x1 = x0 + step
       const z0 = originZ + iz * step, z1 = z0 + step
 
+      const c1  = PALETTE[Math.floor(Math.random() * PALETTE.length)]
       const oy1 = Math.random() * 150
       const ox1 = (Math.random() - 0.3) * 30, oz1 = (Math.random() - 0.3) * 30
-      addVert(x0, z0, ox1, oy1, oz1)
-      addVert(x0, z1, ox1, oy1, oz1)
-      addVert(x1, z0, ox1, oy1, oz1)
+      addVert(x0, z0, ox1, oy1, oz1, c1)
+      addVert(x0, z1, ox1, oy1, oz1, c1)
+      addVert(x1, z0, ox1, oy1, oz1, c1)
 
+      const c2  = PALETTE[Math.floor(Math.random() * PALETTE.length)]
       const oy2 = Math.random() * 150 + 50
       const ox2 = (Math.random() - 0.5) * 20, oz2 = (Math.random() - 0.5) * 20
-      addVert(x1, z0, ox2, oy2, oz2)
-      addVert(x0, z1, ox2, oy2, oz2)
-      addVert(x1, z1, ox2, oy2, oz2)
+      addVert(x1, z0, ox2, oy2, oz2, c2)
+      addVert(x0, z1, ox2, oy2, oz2, c2)
+      addVert(x1, z1, ox2, oy2, oz2, c2)
     }
   }
 

@@ -18,6 +18,10 @@ export function updateUI(delta) {
   }
 }
 
+export function registerWorldElement(el) {
+  worldElements.push(el)
+}
+
 export function spawnWorldLabel(text, position, opts) {
   const label = new WorldLabel(text, position, opts)
   worldElements.push(label)

@@ -1,106 +1,38 @@
-import { engineConfig, setOscWaveform } from './audio.js'
+import { engineConfig, setOscWaveform, setMusicVolume } from './audio.js'
+import { UIPanel } from './ui/UIPanel.js'
 
 const WAVEFORMS = ['sawtooth', 'square', 'triangle', 'sine']
 
-function row(label, min, max, step, key, fmt = v => v) {
-  return { label, min, max, step, key, fmt }
-}
-
 const SLIDERS = [
-  row('IDLE HZ',    20,  150,  1,    'idleHz',    v => `${v} Hz`),
-  row('MAX HZ',     80,  500,  1,    'maxHz',     v => `${v} Hz`),
-  row('IDLE VOL',   0,   0.3,  0.005,'idleVol',   v => v.toFixed(3)),
-  row('MAX VOL',    0.1, 0.8,  0.005,'maxVol',    v => v.toFixed(3)),
-  row('FILTER Q',   0.1, 10,   0.1,  'filterQ',   v => v.toFixed(1)),
-  row('SMOOTH',     0.01,0.4,  0.01, 'smooth',    v => `${v.toFixed(2)}s`),
-  row('LFO IDLE',   1,   20,   0.5,  'lfoIdleHz', v => `${v} Hz`),
-  row('LFO MAX',    10,  120,  1,    'lfoMaxHz',  v => `${v} Hz`),
-  row('LFO DEPTH',  0,   0.8,  0.01, 'lfoDepth',  v => v.toFixed(2)),
-  row('GEARS',      1,   8,    1,    'gears',     v => `${v}`),
-  row('RPM LOW',    0.05,0.5,  0.01, 'rpmLow',    v => v.toFixed(2)),
-  row('RPM HIGH',   0.5, 1.0,  0.01, 'rpmHigh',   v => v.toFixed(2)),
+  { label: 'IDLE HZ',   key: 'idleHz',    min: 20,   max: 150, step: 1,     fmt: v => `${v} Hz`          },
+  { label: 'MAX HZ',    key: 'maxHz',     min: 80,   max: 500, step: 1,     fmt: v => `${v} Hz`          },
+  { label: 'IDLE VOL',  key: 'idleVol',   min: 0,    max: 0.3, step: 0.005, fmt: v => v.toFixed(3)       },
+  { label: 'MAX VOL',   key: 'maxVol',    min: 0.1,  max: 0.8, step: 0.005, fmt: v => v.toFixed(3)       },
+  { label: 'FILTER Q',  key: 'filterQ',   min: 0.1,  max: 10,  step: 0.1,   fmt: v => v.toFixed(1)       },
+  { label: 'SMOOTH',    key: 'smooth',    min: 0.01, max: 0.4, step: 0.01,  fmt: v => `${v.toFixed(2)}s` },
+  { label: 'LFO IDLE',  key: 'lfoIdleHz', min: 1,    max: 20,  step: 0.5,   fmt: v => `${v} Hz`          },
+  { label: 'LFO MAX',   key: 'lfoMaxHz',  min: 10,   max: 120, step: 1,     fmt: v => `${v} Hz`          },
+  { label: 'LFO DEPTH', key: 'lfoDepth',  min: 0,    max: 0.8, step: 0.01,  fmt: v => v.toFixed(2)       },
+  { label: 'GEARS',     key: 'gears',     min: 1,    max: 8,   step: 1,     fmt: v => `${v}`             },
+  { label: 'RPM LOW',   key: 'rpmLow',    min: 0.05, max: 0.5, step: 0.01,  fmt: v => v.toFixed(2)       },
+  { label: 'RPM HIGH',  key: 'rpmHigh',   min: 0.5,  max: 1.0, step: 0.01,  fmt: v => v.toFixed(2)       },
 ]
 
 export function initEngineSynthUI() {
-  const panel = document.createElement('div')
-  panel.id = 'synth-panel'
+  const panel = new UIPanel({ title: 'AUDIO', top: '24px', left: '10px' })
 
-  const header = document.createElement('div')
-  header.id = 'synth-header'
-  header.textContent = 'ENGINE SYNTH'
-  panel.appendChild(header)
-
-  const body = document.createElement('div')
-  body.id = 'synth-body'
-  panel.appendChild(body)
-
-  // ── Sliders ──────────────────────────────────────────────────────────────────
-  for (const { label, min, max, step, key, fmt } of SLIDERS) {
-    const r = document.createElement('div')
-    r.className = 'synth-row'
-
-    const lbl = document.createElement('span')
-    lbl.className = 'synth-label'
-    lbl.textContent = label
-
-    const input = document.createElement('input')
-    input.type  = 'range'
-    input.min   = min
-    input.max   = max
-    input.step  = step
-    input.value = engineConfig[key]
-
-    const val = document.createElement('span')
-    val.className = 'synth-val'
-    val.textContent = fmt(engineConfig[key])
-
-    input.addEventListener('input', () => {
-      engineConfig[key] = parseFloat(input.value)
-      val.textContent   = fmt(engineConfig[key])
-    })
-
-    r.append(lbl, input, val)
-    body.appendChild(r)
-  }
-
-  // ── Waveform pickers ──────────────────────────────────────────────────────────
-  for (const layer of [1, 2]) {
-    const r = document.createElement('div')
-    r.className = 'synth-row'
-
-    const lbl = document.createElement('span')
-    lbl.className = 'synth-label'
-    lbl.textContent = `OSC ${layer}`
-    r.appendChild(lbl)
-
-    const grp = document.createElement('div')
-    grp.className = 'synth-wave-group'
-
-    let active = 'sawtooth'
-    for (const wf of WAVEFORMS) {
-      const btn = document.createElement('button')
-      btn.className = 'synth-wave-btn' + (wf === active ? ' active' : '')
-      btn.textContent = wf.slice(0, 3).toUpperCase()
-      btn.title = wf
-      btn.addEventListener('click', () => {
-        grp.querySelectorAll('.synth-wave-btn').forEach(b => b.classList.remove('active'))
-        btn.classList.add('active')
-        setOscWaveform(layer, wf)
-      })
-      grp.appendChild(btn)
-    }
-
-    r.appendChild(grp)
-    body.appendChild(r)
-  }
-
-  // ── Collapse toggle ───────────────────────────────────────────────────────────
-  let collapsed = false
-  header.addEventListener('click', () => {
-    collapsed = !collapsed
-    body.style.display = collapsed ? 'none' : 'flex'
-    header.dataset.collapsed = collapsed
+  panel.addSlider('BGM VOL', { min: 0, max: 1, step: 0.01, value: 0.4, fmt: v => v.toFixed(2) }, v => {
+    setMusicVolume(v)
   })
 
-  document.getElementById('ui').appendChild(panel)
+  for (const { label, key, min, max, step, fmt } of SLIDERS) {
+    panel.addSlider(label, { min, max, step, value: engineConfig[key], fmt }, v => {
+      engineConfig[key] = v
+    })
+  }
+
+  const waveOptions = WAVEFORMS.map(wf => ({ label: wf.slice(0, 3).toUpperCase(), value: wf }))
+  for (const layer of [1, 2]) {
+    panel.addButtons(`OSC ${layer}`, waveOptions, 'sawtooth', wf => setOscWaveform(layer, wf))
+  }
 }

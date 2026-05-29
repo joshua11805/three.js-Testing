@@ -29,6 +29,14 @@ export function playMusic(url, volume = 0.4) {
   }, undefined, err => console.warn('BGM failed:', url, err))
 }
 
+export function pauseMusic() {
+  if (_bgm?.isPlaying) _bgm.pause()
+}
+
+export function resumeMusic() {
+  if (_bgm && !_bgm.isPlaying) _bgm.play()
+}
+
 export function stopMusic() {
   if (_bgm?.isPlaying) _bgm.stop()
   _bgm = null
@@ -36,6 +44,16 @@ export function stopMusic() {
 
 export function setMusicVolume(v) {
   if (_bgm) _bgm.setVolume(Math.max(0, v))
+}
+
+export function pauseEngineAudio() {
+  if (!_engineGain) return
+  _engineGain.gain.cancelScheduledValues(ctx.currentTime)
+  _engineGain.gain.setValueAtTime(0, ctx.currentTime)
+}
+
+export function resumeEngineAudio() {
+  // updateEngineAudio will ramp gain back up naturally on the next active frame
 }
 
 // ─── One-shot SFX ─────────────────────────────────────────────────────────────

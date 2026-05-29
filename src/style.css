@@ -97,8 +97,9 @@ canvas { display: block; }
 
 .speed-bg {
   fill: none;
-  stroke: rgba(255,255,255,0.1);
+  stroke: rgba(255, 255, 255, 0.13);
   stroke-width: 12;
+  background: 2px;
 }
 
 .speed-fill {
@@ -191,46 +192,56 @@ canvas { display: block; }
 }
 
 .menu-box {
-  background: rgba(10, 10, 10, 0.9);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 8px;
-  padding: 40px 64px;
+  background: rgba(0, 0, 0, 0.78);
+  border-radius: 6px;
+  padding: 32px 48px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 24px;
+  gap: 16px;
+  font: 12px/1.6 monospace;
+  color: #eee;
+  min-width: 240px;
+  user-select: none;
 }
 
 .menu-box h2 {
-  color: #fff;
-  font-size: 26px;
-  font-weight: 700;
-  letter-spacing: 5px;
+  color: #eee;
+  font: bold 15px/1.6 monospace;
+  letter-spacing: 4px;
+  margin-bottom: 4px;
 }
 
 .menu-box button {
-  background: #4caf50;
-  color: #fff;
-  border: none;
-  padding: 11px 36px;
-  border-radius: 4px;
-  font-size: 13px;
+  background: #44aaff;
+  border: 1px solid #44aaff;
+  color: #000;
+  padding: 8px 0;
+  border-radius: 3px;
+  font: 11px monospace;
   font-weight: 700;
   letter-spacing: 1px;
   cursor: pointer;
-  transition: background 0.15s;
+  transition: background 0.15s, color 0.15s;
   pointer-events: auto;
+  width: 160px;
 }
 
-.menu-box button:hover { background: #66bb6a; }
+.menu-box button:hover {
+  background: #77ccff;
+  border-color: #77ccff;
+}
 
 #restart-btn {
-  background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: none;
+  border-color: #888;
+  color: #888;
 }
 
 #restart-btn:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: #888;
+  color: #000;
+  border-color: #888;
 }
 
 /* ============================================================

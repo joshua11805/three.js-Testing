@@ -70,14 +70,16 @@ loadCar().then(gltf => {
 }).catch(err => console.warn('car.gltf failed to load:', err))
 
 // ─── Driving constants ────────────────────────────────────────────────────────
+const ACTUAL_MAX = 45
 const MAX_SPEED    = 35
 const MAX_REVERSE  = 8
-const ACCEL        = 6
-const BRAKE        = 5
+const ACCEL        = 4
+const BRAKE        = 3
 const COAST_DRAG   = 0.03
 const LATERAL_GRIP = 17
 const STEER_MAX    = 1.5
 const STEER_DAMP   = 0.012
+const BOOST = 5
 
 // ─── Per-frame state ──────────────────────────────────────────────────────────
 let heading = 0
@@ -160,8 +162,11 @@ function drivingUpdate(delta) {
   const vel = carBody.velocity
   let vLat  = vel.dot(_right)
 
+  const boosting = isPressed('ShiftLeft')
   if (isPressed('KeyW') || isPressed('ArrowUp')) {
-    vFwd = Math.min(vFwd + ACCEL * delta, MAX_SPEED)
+    const accel = boosting ? ACCEL + BOOST : ACCEL
+    const cap   = boosting ? ACTUAL_MAX    : MAX_SPEED
+    vFwd = Math.min(vFwd + accel * delta, cap)
   } else if (isPressed('KeyS') || isPressed('ArrowDown')) {
     if (vFwd > 1) {
       vFwd = Math.max(vFwd - BRAKE * delta, 0)

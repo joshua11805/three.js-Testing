@@ -6,20 +6,19 @@ import { terrainHeight } from './noise.js'
 
 // ─── Parameters ───────────────────────────────────────────────────────────────
 const STEP          = 0.5     // world units between consecutive road points
-const CHUNK_SIZE    = 1000    // steps generated per batch (500 world units)
-const LOOKAHEAD     = 16000   // steps kept ahead of player  (8 000 world units)
+const CHUNK_SIZE    = 600    // steps generated per batch (500 world units)
+const LOOKAHEAD     = 32000   // steps kept ahead of player  (8 000 world units)
 const LOOKBEHIND    = 4000    // steps kept behind player    (2 000 world units)
-const SMOOTH_WINDOW = 120     // moving-average half-window  (60 world units/side)
 const BUCKET_SIZE   = 6       // spatial hash cell size (world units)
 
-export const ROAD_WIDTH = 16
+export const ROAD_WIDTH = 12
 const HALF_W     = ROAD_WIDTH / 2
 const ROAD_COLOR = { r: 0.01, g: 0.05, b: 0.08 }
 
 // Curve tuning — long sweeping arcs, no sharp corners
 const CURVE_INTERVAL = 300    // steps between direction updates (~150 world units)
-const MAX_ANG_VEL    = 0.005  // rad / step  (min turn radius ≈ 100 world units)
-const ANG_VEL_DAMP   = 0.998  // per-step decay — road naturally straightens
+const MAX_ANG_VEL    = 0.010  // rad / step  (min turn radius ≈ 100 world units)
+const ANG_VEL_DAMP   = 0.990  // per-step decay — road naturally straightens
 
 // ─── Seeded PRNG (mulberry32) ─────────────────────────────────────────────────
 function makeRng(seed) {
@@ -81,48 +80,19 @@ let fX = 0, fZ = 0, fH = Math.PI, fAV = 0
 let totalSteps = 0
 const rng = makeRng(0xA3F1)
 
-// Lookbehind buffer: last SMOOTH_WINDOW raw terrain heights for cross-chunk
-// height continuity.
-const rawTail = new Float32Array(SMOOTH_WINDOW)
-
 // Chunk list for pruning: { endStep: number, xz: number[] }
 const chunks = []
-
-// ─── Height smoothing ─────────────────────────────────────────────────────────
-// Prepend `prefix` (previous raw heights) so the moving average at the start of
-// `rawChunk` has correct context.  Returns smoothed heights for rawChunk only.
-function smoothChunk(prefix, rawChunk) {
-  const pn = prefix.length, cn = rawChunk.length, n = pn + cn
-  const all = new Float32Array(n)
-  all.set(prefix)
-  for (let i = 0; i < cn; i++) all[pn + i] = rawChunk[i]
-
-  const half = SMOOTH_WINDOW >> 1
-  let sum = 0, cnt = 0
-  for (let j = 0; j <= Math.min(half, n - 1); j++) { sum += all[j]; cnt++ }
-
-  const out = new Float32Array(n)
-  for (let i = 0; i < n; i++) {
-    const add = i + half, rem = i - half - 1
-    if (add < n)  { sum += all[add]; cnt++ }
-    if (rem >= 0) { sum -= all[rem]; cnt-- }
-    out[i] = sum / cnt
-  }
-  return out.subarray(pn)
-}
 
 // ─── Chunk generation ─────────────────────────────────────────────────────────
 function generateChunk() {
   const startStep = totalSteps
   // Use a regular Array (float64) so removePt comparisons stay exact.
-  const xz  = []
-  const raw  = new Float32Array(CHUNK_SIZE)
+  const xz = []
 
   let x = fX, z = fZ, h = fH, av = fAV
 
   for (let i = 0; i < CHUNK_SIZE; i++) {
     xz.push(x, z)
-    raw[i] = terrainHeight(x, z)
 
     if ((startStep + i) % CURVE_INTERVAL === 0) {
       const target = (rng() - 0.5) * MAX_ANG_VEL * 2
@@ -137,18 +107,8 @@ function generateChunk() {
   fX = x; fZ = z; fH = h; fAV = av
   totalSteps += CHUNK_SIZE
 
-  const ys = smoothChunk(rawTail, raw)
-
-  // Roll rawTail forward with the last SMOOTH_WINDOW raw values.
-  if (CHUNK_SIZE >= SMOOTH_WINDOW) {
-    for (let i = 0; i < SMOOTH_WINDOW; i++) rawTail[i] = raw[CHUNK_SIZE - SMOOTH_WINDOW + i]
-  } else {
-    rawTail.copyWithin(0, SMOOTH_WINDOW - CHUNK_SIZE)
-    for (let i = 0; i < CHUNK_SIZE; i++) rawTail[SMOOTH_WINDOW - CHUNK_SIZE + i] = raw[i]
-  }
-
   for (let i = 0; i < CHUNK_SIZE; i++) {
-    insertPt(xz[i * 2], xz[i * 2 + 1], ys[i], startStep + i)
+    insertPt(xz[i * 2], xz[i * 2 + 1], terrainHeight(xz[i * 2], xz[i * 2 + 1]), startStep + i)
   }
 
   chunks.push({ endStep: startStep + CHUNK_SIZE - 1, xz })
