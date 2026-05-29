@@ -35,14 +35,14 @@ const placeholder = new THREE.Mesh(
 pivot.add(placeholder)
 
 async function loadCar() {
-  const json = await fetch('/models/car1.gltf').then(r => r.json())
+  const json = await fetch(`${import.meta.env.BASE_URL}models/car1.gltf`).then(r => r.json())
   if (json.extensionsUsed)
     json.extensionsUsed = json.extensionsUsed.filter(e => e !== 'KHR_materials_unlit')
   json.materials?.forEach(mat => {
     if (mat.extensions) delete mat.extensions.KHR_materials_unlit
   })
   return new Promise((resolve, reject) =>
-    new GLTFLoader().parse(JSON.stringify(json), '/models/', resolve, reject))
+    new GLTFLoader().parse(JSON.stringify(json), `${import.meta.env.BASE_URL}models/`, resolve, reject))
 }
 
 loadCar().then(gltf => {

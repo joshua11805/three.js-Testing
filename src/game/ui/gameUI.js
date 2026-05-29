@@ -9,7 +9,7 @@ export function initGameUI(onStart) {
   initDriveHud()
   initStartScreen(() => {
     showDriveHud()
-    playMusic('/audio/background.mp3')
+    playMusic(`${import.meta.env.BASE_URL}audio/background.mp3`)
     if (onStart) onStart()
   })
   initPauseMenu()

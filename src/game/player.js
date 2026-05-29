@@ -47,10 +47,10 @@ function stripRootMotion(clip) {
 
 async function loadCharacter() {
   const [fbx, idleFBX, walkFBX, jumpFBX] = await Promise.all([
-    loadFBX('/models/character.fbx'),
-    loadFBX('/animations/Breathing Idle.fbx'),
-    loadFBX('/animations/Walking.fbx'),
-    loadFBX('/animations/Jump.fbx'),
+    loadFBX(`${import.meta.env.BASE_URL}models/character.fbx`),
+    loadFBX(`${import.meta.env.BASE_URL}animations/Breathing Idle.fbx`),
+    loadFBX(`${import.meta.env.BASE_URL}animations/Walking.fbx`),
+    loadFBX(`${import.meta.env.BASE_URL}animations/Jump.fbx`),
   ])
 
   fbx.scale.setScalar(0.01)
