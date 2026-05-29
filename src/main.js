@@ -3,7 +3,7 @@ import { stepPhysics }                                      from './engine/physi
 import { initFirstPersonCamera }                            from './engine/firstPersonCamera.js'
 import { tickShaders }                                      from './engine/shaderSystem.js'
 import { initDebug }                                        from './engine/debug.js'
-import { initUI }                                           from './ui/ui.js'
+import { initUI }                                           from './UI/ui.js'
 import { initGameUI, updateGameUI, isStarted, isPaused, setSpeed }    from './game/ui/gameUI.js'
 import { initTerrain, updateTerrain }                       from './engine/terrain/chunkManager.js'
 import { updateRoad }                                        from './engine/terrain/road.js'
