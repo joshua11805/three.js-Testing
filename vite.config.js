@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite'
 
 export default defineConfig({
+  base: '/three.js-Testing/',
   server: {
     watch: {
       // Don't watch the public folder — static assets (audio, images, models)
