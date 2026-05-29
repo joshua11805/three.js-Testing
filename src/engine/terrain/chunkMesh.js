@@ -4,6 +4,8 @@ import { applyRoad } from './road.js'
 
 export const CHUNK_SIZE = 32
 export const LOD_SEGMENTS = [16, 16, 16, 16]
+const SEGMENT_VAR = 4
+const VERTEX_JITTER = 0.7  // XZ offset per grid corner — keep < step * 0.4 (step=2 → max safe ≈ 0.8)
 
 // ─── shared pulse uniforms ────────────────────────────────────────────────────
 // uTime:  total elapsed seconds, drives oscillation frequency
@@ -112,6 +114,18 @@ const PALETTE = [
   { r: 0.25, g: 0.02, b: 0.25 },  // dark purple
 ]
 
+// ─── corner jitter ────────────────────────────────────────────────────────────
+// Deterministic hash keyed on world XZ grid coords — identical across chunk and
+// triangle boundaries so shared corners always displace to the same position.
+function cornerJitter(wx, wz) {
+  const hx = Math.sin(wx * 127.1 + wz * 311.7) * 43758.5453
+  const hz = Math.sin(wx * 269.5 + wz * 183.3) * 43758.5453
+  return [
+    (hx - Math.floor(hx) - 0.5) * 2 * VERTEX_JITTER,
+    (hz - Math.floor(hz) - 0.5) * 2 * VERTEX_JITTER,
+  ]
+}
+
 // ─── chunk mesh builder ───────────────────────────────────────────────────────
 export function buildChunkMesh(chunkX, chunkZ, lod) {
   const segments = LOD_SEGMENTS[Math.min(lod, LOD_SEGMENTS.length - 1)]
@@ -151,19 +165,24 @@ export function buildChunkMesh(chunkX, chunkZ, lod) {
       const x0 = originX + ix * step, x1 = x0 + step
       const z0 = originZ + iz * step, z1 = z0 + step
 
+      const [jx00, jz00] = cornerJitter(x0, z0)
+      const [jx01, jz01] = cornerJitter(x0, z1)
+      const [jx10, jz10] = cornerJitter(x1, z0)
+      const [jx11, jz11] = cornerJitter(x1, z1)
+
       const c1  = PALETTE[Math.floor(Math.random() * PALETTE.length)]
       const oy1 = Math.random() * 150
       const ox1 = (Math.random() - 0.3) * 30, oz1 = (Math.random() - 0.3) * 30
-      addVert(x0, z0, ox1, oy1, oz1, c1)
-      addVert(x0, z1, ox1, oy1, oz1, c1)
-      addVert(x1, z0, ox1, oy1, oz1, c1)
+      addVert(x0 + jx00, z0 + jz00, ox1, oy1, oz1, c1)
+      addVert(x0 + jx01, z1 + jz01, ox1, oy1, oz1, c1)
+      addVert(x1 + jx10, z0 + jz10, ox1, oy1, oz1, c1)
 
       const c2  = PALETTE[Math.floor(Math.random() * PALETTE.length)]
       const oy2 = Math.random() * 150 + 50
       const ox2 = (Math.random() - 0.5) * 20, oz2 = (Math.random() - 0.5) * 20
-      addVert(x1, z0, ox2, oy2, oz2, c2)
-      addVert(x0, z1, ox2, oy2, oz2, c2)
-      addVert(x1, z1, ox2, oy2, oz2, c2)
+      addVert(x1 + jx10, z0 + jz10, ox2, oy2, oz2, c2)
+      addVert(x0 + jx01, z1 + jz01, ox2, oy2, oz2, c2)
+      addVert(x1 + jx11, z1 + jz11, ox2, oy2, oz2, c2)
     }
   }
 

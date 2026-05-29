@@ -2,8 +2,8 @@ import { createNoise2D } from 'simplex-noise'
 
 const noise2D = createNoise2D()
 export const terrainParams = {
-  scale:       0.004,
-  amplitude:   25,
+  scale:       0.003,
+  amplitude:   22,
   octaves:     5,
   persistence: 0.45,
   lacunarity:  2.1,

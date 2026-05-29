@@ -13,14 +13,15 @@ const HEADING_LERP = 0.06  // camera heading lags behind car — lower = more la
 
 // FOV — subtle pull-back while accelerating
 const FOV_BASE     = 60   // degrees at rest
-const FOV_MAX      = 80   // degrees at full W pressure
-const FOV_BOOST    = 90  // degrees at full Shift+W pressure
+const FOV_MAX      = 72   // degrees at full W pressure
+const FOV_BOOST    = 80  // degrees at full Shift+W pressure
 const EXPAND_TIME  = 3.6  // seconds to reach max from rest
 const RECOVER_TIME = 1.6  // seconds to return to FOV_BASE from full
 
 let fovPressure  = 0  // 0–1, how wide the FOV is expanding
 let boostBlend   = 0  // 0–1, lerps toward 1 while Shift held
 let camHeading   = 0  // smoothed heading used for camera placement
+let _snapped     = false
 
 const _targetPos = new THREE.Vector3()
 const _currentLook = new THREE.Vector3()
@@ -40,7 +41,12 @@ export function updateCarCamera(carPosition, heading, delta) {
 
   _targetPos.set(desiredX, desiredY, desiredZ)
 
-  camera.position.lerp(_targetPos, POS_LERP)
+  if (!_snapped) {
+    camera.position.copy(_targetPos)
+    _snapped = true
+  } else {
+    camera.position.lerp(_targetPos, POS_LERP)
+  }
 
   // ─────────────────────────────
   // 2. Smooth look-at target

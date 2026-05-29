@@ -4,7 +4,7 @@ let speedCircle
 const MAX_SPEED = 180
 const CIRCUMFERENCE = 2 * Math.PI * 80 // r=80 => ~502
 const WHITE = { r: 250, g: 250, b: 250 }
-const GREY = { r: 100, g: 100, b: 100 }
+const GREY = { r: 160, g: 160, b: 160 }
 const PURPLE = { r: 2230, g: 125, b: 250 }
 const RED = { r: 240, g: 29, b: 22 }
 

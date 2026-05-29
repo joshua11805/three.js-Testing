@@ -59,6 +59,11 @@ function applySuspension(body, halfHeight, delta) {
   }
 }
 
+// Snap camera to correct starting position before the first frame renders.
+// Without this the camera sits at Three.js default origin (inside the car) until
+// the player presses Play.
+updateCarCamera(carBody.position, getActiveCarForward(), 0)
+
 // ─── Main update ──────────────────────────────────────────────────────────────
 export function updateVehicleSystem(delta, active) {
   applySuspension(carBody, carBody.halfSize.y, delta)
