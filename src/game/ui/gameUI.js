@@ -2,7 +2,7 @@ import { initDriveHud, setSpeed, showDriveHud }         from './driveHUD.js'
 import { initPauseMenu, isPaused }                      from './pauseMenu.js'
 import { initStartScreen, isStarted }                   from './startScreen.js'
 import { DamageNumber }                                 from './DamageNumber.js'
-import { showNotification, updateUI, registerWorldElement } from '../../ui/ui.js'
+import { showNotification, updateUI, registerWorldElement } from '../../UI/ui.js'
 import { playMusic }                                    from '../../engine/audio.js'
 
 export function initGameUI(onStart) {

@@ -1,4 +1,4 @@
-import { WorldLabel } from '../../ui/world/WorldLabel.js'
+import { WorldLabel } from '../../UI/world/WorldLabel.js'
 
 export class DamageNumber extends WorldLabel {
   constructor(amount, position) {
